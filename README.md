@@ -53,15 +53,18 @@ Eine Abfahrtsanzeige mit Text auf schwarzem Grund und ca. 80 % Helligkeit brauch
 
 ---
 
-## 2. Gehäuse (3D-Druck)
+## 2. Gehäuse 
 
-Das Gehäuse stammt von **steelbuddy**: *\<Link zum Modell hier eintragen\>*
-
-- Druckt es laut Modellbeschreibung (Material, Wandstärke, Supports) und beachtet die Hinweise des Autors.
+Das Gehäuse stammt von steelbuddy.de
+Blechwanne mit Verschweißten Ecke
+Stärke 3mm
+Länge 520mm
+Höhe je Seite 50mm
+Löcher entweder mit Bestellen oder selber Bohren 
 - Plane eine **Lüftungsmöglichkeit** ein; 5-V-Netzteil und Panels werden warm.
 - Ein **Diffusor / eine dunkle Frontscheibe** (z. B. getöntes Acryl) verbessert Kontrast und Lesbarkeit deutlich.
 - Bitte die Lizenz des Originalmodells beachten. Dieses Repository enthält das Gehäuse **nicht**.
-
+3d Druckcase geht auch aber dafür habe ich leider keine Vorlage nur für 32x64 :)
 ---
 
 ## 3. Verkabelung
@@ -246,15 +249,13 @@ partitions.csv     Partitionstabelle (OTA)
 - Konfiguration und WLAN-Zugangsdaten liegen im NVS-Flash, kein Dateisystem nötig. Die Zugangsdaten stehen **nicht** im Quellcode.
 - Die Abfragen laufen in einem eigenen Task auf Core 0, die Anzeige ist davon entkoppelt.
 
-## Lizenz
 
-*\<z. B. MIT-Lizenz, Datei `LICENSE` hinzufügen\>*
 
 Dies ist ein privates Hobbyprojekt und steht in keiner Verbindung zur BVG. „BVG“ und Liniensymbole sind Marken ihrer Inhaber.
 
 ## Credits
 
-- Gehäuse: **steelbuddy**
+- Gehäuse: steelbuddy.de
 - [ESP32-HUB75-MatrixPanel-DMA](https://github.com/mrfaptastic/ESP32-HUB75-MatrixPanel-DMA) von mrfaptastic
 - [ArduinoJson](https://arduinojson.org/) von Benoit Blanchon
 - [Adafruit GFX](https://github.com/adafruit/Adafruit-GFX-Library)
