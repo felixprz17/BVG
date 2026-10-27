@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>BVG Matrix – WLAN einrichten</title>
+<style>
+:root{--bg:#0a0a0f;--surface:#12121a;--border:#1e1e2e;--accent:#f0c000;--green:#00c864;--red:#e03c3c;--text:#e0e0e0;--muted:#707080;--mono:ui-monospace,Menlo,Consolas,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh;padding:20px 16px 40px}
+.wrap{max-width:440px;margin:0 auto}
+h1{font-family:var(--mono);font-size:17px;font-weight:600;margin-bottom:4px}
+h1 em{color:var(--accent);font-style:normal}
+.sub{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px}
+.title{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px}
+.net{display:flex;align-items:center;gap:10px;padding:13px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer;background:#0a0a0f}
+.net.sel{border-color:var(--accent);background:rgba(240,192,0,.07)}
+.net .n{flex:1;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.net .lock{font-size:12px;color:var(--muted)}
+.bars{display:flex;align-items:flex-end;gap:2px;height:14px}
+.bars i{display:block;width:3px;background:var(--border);border-radius:1px}
+.bars i.on{background:var(--green)}
+.empty{font-size:13px;color:var(--muted);padding:6px 2px}
+label{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:12px 0 6px}
+input{width:100%;background:#0a0a0f;border:1px solid var(--border);border-radius:8px;padding:13px 12px;color:var(--text);font-size:16px;outline:none}
+input:focus{border-color:var(--accent)}
+.pw{position:relative}
+.pw button{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);font-size:13px;padding:8px;cursor:pointer}
+.btn{width:100%;padding:15px;border:1px solid var(--accent);border-radius:8px;background:rgba(240,192,0,.08);color:var(--accent);font-family:var(--mono);font-size:14px;cursor:pointer;margin-top:16px}
+.btn:disabled{opacity:.5}
+.msg{font-size:13px;margin-top:12px;line-height:1.5;min-height:18px}
+.msg.err{color:var(--red)}
+.msg.ok{color:var(--green)}
+.link{background:none;border:none;color:var(--muted);font-size:13px;text-decoration:underline;cursor:pointer;padding:6px 0}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>BVG <em>Matrix</em> · WLAN</h1>
+  <p class="sub">Wähle dein WLAN und gib das Passwort ein. Danach startet die Anzeige neu und verbindet sich.</p>
+
+  <div id="form">
+    <div class="card">
+      <div class="title">Gefundene Netzwerke</div>
+      <div id="list"><div class="empty">Lade…</div></div>
+      <button class="link" id="manual-toggle" type="button">Netzwerk nicht dabei? Name selbst eingeben</button>
+      <div id="manual" class="hide">
+        <label for="ssid-manual">WLAN-Name (SSID)</label>
+        <input id="ssid-manual" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Name des WLANs">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="title">Ausgewählt: <span id="chosen" style="color:var(--accent);text-transform:none;letter-spacing:0">–</span></div>
+      <label for="pw">Passwort</label>
+      <div class="pw">
+        <input id="pw" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="WLAN-Passwort" style="padding-right:70px">
+        <button type="button" id="pw-toggle">zeigen</button>
+      </div>
+      <button class="btn" id="save" type="button">Speichern &amp; verbinden</button>
+      <div class="msg" id="msg"></div>
+    </div>
+  </div>
+
+  <div id="done" class="card hide">
+    <div class="title">Gespeichert</div>
+    <p style="font-size:14px;line-height:1.6">Die Anzeige startet neu und verbindet sich mit <b id="done-ssid"></b>.<br><br>
+    1. Verbinde dein Handy wieder mit deinem normalen WLAN.<br>
+    2. Die IP-Adresse erscheint kurz auf der Matrix.<br>
+    3. Öffne dann <b>http://bvg-matrix.local/</b> oder die angezeigte IP, um Haltestellen einzustellen.<br><br>
+    Klappt die Verbindung nicht (falsches Passwort), öffnet sich dieses Setup-WLAN nach etwa einer Minute erneut.</p>
+  </div>
+</div>
+
+<script>
+let selected = '';
+let useManual = false;
+const $ = id => document.getElementById(id);
+
+function bars(rssi){
+  const lvl = rssi > -55 ? 4 : rssi > -65 ? 3 : rssi > -75 ? 2 : 1;
+  let h = '<div class="bars">';
+  for (let i = 1; i <= 4; i++) h += `<i class="${i <= lvl ? 'on' : ''}" style="height:${3 + i * 3}px"></i>`;
+  return h + '</div>';
+}
+
+function choose(ssid){
+  selected = ssid;
+  useManual = false;
+  $('chosen').textContent = ssid || '–';
+  document.querySelectorAll('.net').forEach(e => e.classList.toggle('sel', e.dataset.ssid === ssid));
+}
+
+async function loadNetworks(){
+  const list = $('list');
+  try {
+    const d = await (await fetch('/api/wifi-networks')).json();
+    list.innerHTML = '';
+    if (!d.networks.length) { list.innerHTML = '<div class="empty">Keine Netzwerke gefunden – Namen selbst eingeben.</div>'; showManual(); return; }
+    d.networks.forEach(n => {
+      const el = document.createElement('div');
+      el.className = 'net';
+      el.dataset.ssid = n.ssid;
+      el.innerHTML = `<span class="n"></span><span class="lock">${n.secure ? '🔒' : 'offen'}</span>${bars(n.rssi)}`;
+      el.querySelector('.n').textContent = n.ssid;
+      el.onclick = () => { choose(n.ssid); $('pw').focus(); };
+      list.appendChild(el);
+    });
+  } catch (e) {
+    list.innerHTML = '<div class="empty">Liste nicht ladbar – Namen selbst eingeben.</div>';
+    showManual();
+  }
+}
+
+function showManual(){
+  $('manual').classList.remove('hide');
+  $('manual-toggle').classList.add('hide');
+  useManual = true;
+  $('chosen').textContent = $('ssid-manual').value || '–';
+}
+
+$('manual-toggle').onclick = () => { showManual(); $('ssid-manual').focus(); };
+$('ssid-manual').oninput = e => { useManual = true; $('chosen').textContent = e.target.value || '–'; document.querySelectorAll('.net').forEach(x => x.classList.remove('sel')); };
+$('pw-toggle').onclick = () => {
+  const p = $('pw'), show = p.type === 'password';
+  p.type = show ? 'text' : 'password';
+  $('pw-toggle').textContent = show ? 'verbergen' : 'zeigen';
+};
+
+$('save').onclick = async () => {
+  const ssid = (useManual ? $('ssid-manual').value : selected).trim();
+  const password = $('pw').value;
+  const msg = $('msg');
+  msg.className = 'msg';
+  if (!ssid) { msg.className = 'msg err'; msg.textContent = 'Bitte ein WLAN auswählen.'; return; }
+  $('save').disabled = true;
+  msg.textContent = 'Speichere…';
+  try {
+    const r = await fetch('/api/wifi-save', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ssid, password})});
+    const d = await r.json();
+    if (d.ok) {
+      $('done-ssid').textContent = ssid;
+      $('form').classList.add('hide');
+      $('done').classList.remove('hide');
+    } else {
+      msg.className = 'msg err'; msg.textContent = d.error || 'Fehler';
+      $('save').disabled = false;
+    }
+  } catch (e) {
+    msg.className = 'msg err'; msg.textContent = 'Keine Verbindung zum Board.';
+    $('save').disabled = false;
+  }
+};
+
+loadNetworks();
+</script>
+</body>
+</html>
